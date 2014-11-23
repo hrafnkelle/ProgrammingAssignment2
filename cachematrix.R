@@ -13,15 +13,21 @@
 ## The object has a set/get interface to access the underlying R matrix() 
 ## value and a getInv/setInv interface to do the same for the inverse matrix() value
 
-makeCacheMatrix <- function(x = matrix()) {
-  m <- NULL
-  set <- function(y) {
-    x <<- y
-    m <<- NULL
+makeCacheMatrix <- function(mat = matrix()) {
+  cachedInverse <- NULL # the get/setInv functions use this variable, its in their parent scope
+  
+  set <- function(newMat) {
+    mat <<- newMat
+    # clear the cachedInverse since we have a new matrix and the inverse has not been requested yet
+    cachedInverse <<- NULL 
   }
-  get <- function() x
-  setInv <- function(inv) m <<- inv
-  getInv <- function() m
+  
+  get <- function() mat
+  
+  setInv <- function(inv) cachedInverse <<- inv
+  
+  getInv <- function() cachedInverse
+  
   list(set = set, get = get,
        setInv = setInv,
        getInv = getInv)
@@ -32,15 +38,16 @@ makeCacheMatrix <- function(x = matrix()) {
 ## If the inverse has already been calculated it returns the previous calculation
 ## result, otherwise it calculates the inverse and caches it in x
 
-cacheSolve <- function(x, ...) {
-        ## Return a matrix that is the inverse of 'x'
-  m <- x$getInv()
-  if(!is.null(m)) {
+cacheSolve <- function(mat, ...) {
+  ## Return a matrix that is the inverse of 'mat' either by
+  ## reusing a cachedInverse or calculating it first (and caching)
+  cachedInverse <- mat$getInv()
+  if(!is.null(cachedInverse)) {
     message("getting cached data")
-    return(m)
+    return(cachedInverse)
   }
-  data <- x$get()
-  m <- solve(data, ...)
-  x$setInv(m)
-  m
+  data <- mat$get()
+  cachedInverse <- solve(data, ...)
+  mat$setInv(cachedInverse)
+  cachedInverse
 }
